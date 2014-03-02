@@ -7,20 +7,70 @@
     using System.Text;
     using BeaEngineCS;
 
+    /// <summary>
+    /// Represents a disassembled instruction.
+    /// </summary>
     public class Instruction : INotifyPropertyChanged
     {
-        public event PropertyChangedEventHandler PropertyChanged;
+        #region Fields
 
-        protected void OnPropertyChanged(string info)
+        /// <summary>
+        /// The string representation of the instruction.
+        /// </summary>
+        private string stringRepresentation = string.Empty;
+
+        #endregion
+
+        #region Constructors
+
+        /// <summary>
+        /// Initializes a new instance of the Instruction class, using a BeaEngine instruction.
+        /// </summary>
+        /// <param name="inst">the BeaEngine instruction</param>
+        internal Instruction(BeaEngine._Disasm inst)
         {
-            PropertyChangedEventHandler handler = PropertyChanged;
-            if (handler != null)
-            {
-                handler(this, new PropertyChangedEventArgs(info));
-            }
+            this.Address = (IntPtr)inst.VirtualAddr;
+            this.Mnemonic = inst.Instruction.Mnemonic;
+            this.stringRepresentation = inst.CompleteInstr;
+            this.BranchTarget = (IntPtr)inst.Instruction.AddrValue;
+            this.FlowType = Instruction.GetFlowControl(this.Mnemonic);
+            this.NumBytes = (uint)inst.Length;
+            this.Arg1 = new InstructionArgument(inst.Argument1);
+            this.Arg2 = new InstructionArgument(inst.Argument2);
+            this.Arg3 = new InstructionArgument(inst.Argument3);
         }
 
-        private string stringRepresentation = string.Empty;
+        /// <summary>
+        /// Initializes a new instance of the Instruction class, using a Distorm instruction.
+        /// </summary>
+        /// <param name="inst">the Distorm instruction</param>
+        internal Instruction(Distorm3cs.Distorm.DInst inst)
+        {
+            this.Address = (IntPtr)inst.addr;
+            this.Mnemonic = inst.InstructionType.ToString().ToLower();
+
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Prevents a default instance of the Instruction class from being created.
+        /// </summary>
+        private Instruction()
+        {
+        }
+
+        #endregion
+
+        #region Events
+
+        /// <summary>
+        /// An event handler that handles when properties are changed.
+        /// </summary>
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        #endregion
+
+        #region Enumerations
 
         /// <summary>
         /// Flow control of execution.
@@ -59,7 +109,7 @@
             ConditionalBranch,
 
             /// <summary>
-            /// Indiciates the instruction is one of: INT, INT1, INT 3, INTO, UD2.
+            /// Indicates the instruction is one of: INT, INT1, INT 3, INTO, UD2.
             /// </summary>
             Interupt,
 
@@ -69,46 +119,145 @@
             CMOVxx,
         }
 
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Gets or sets the instruction of the instruction.
+        /// </summary>
         public IntPtr Address { get; set; }
+
+        /// <summary>
+        /// Gets a string representation of the instruction.
+        /// </summary>
         public string AddressAsString
         {
             get { return "0x" + this.Address.ToString("x").PadLeft(this.PointerWidth, '0'); }
         }
+
+        /// <summary>
+        /// Gets the mnemonic portion of the instruction.
+        /// </summary>
         public string Mnemonic { get; private set; }
+
+        /// <summary>
+        /// Gets the target of the instruction if it branches elsewhere.
+        /// </summary>
         public IntPtr BranchTarget { get; private set; }
+
+        /// <summary>
+        /// Gets the type of control flow for this instruction.
+        /// </summary>
         public ControlFlow FlowType { get; private set; }
+
+        /// <summary>
+        /// Gets the number of bytes this instruction takes up.
+        /// </summary>
         public uint NumBytes { get; private set; }
+
+        /// <summary>
+        /// Gets the first argument of the instruction.
+        /// </summary>
         public InstructionArgument Arg1 { get; private set; }
+
+        /// <summary>
+        /// Gets the second argument of the instruction.
+        /// </summary>
         public InstructionArgument Arg2 { get; private set; }
+
+        /// <summary>
+        /// Gets the third argument of the instruction.
+        /// </summary>
         public InstructionArgument Arg3 { get; private set; }
-        public string CompleteInstruction { get { return this.ToString(); } }
+
+        /// <summary>
+        /// Gets a complete string representation of this instruction.
+        /// </summary>
+        public string CompleteInstruction
+        {
+            get
+            {
+                return this.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the width of the pointer used by this instruction.
+        /// </summary>
         public ushort PointerWidth { get; set; }
 
-        private Instruction()
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Create an invalid instruction. Useful as a temporary instruction.
+        /// </summary>
+        /// <returns>an invalid instruction</returns>
+        public static Instruction CreateInvalidInstruction()
         {
+            Instruction inst = new Instruction();
+            inst.Address = IntPtr.Subtract(IntPtr.Zero, 1);
+            inst.Mnemonic = "invalid";
+            inst.stringRepresentation = "invalid instruction";
+            inst.BranchTarget = IntPtr.Zero;
+            inst.FlowType = ControlFlow.None;
+            inst.NumBytes = 0;
+            inst.Arg1 = new InstructionArgument();
+            inst.Arg2 = new InstructionArgument();
+            inst.Arg3 = new InstructionArgument();
+            return inst;
         }
 
-        internal Instruction(BeaEngine._Disasm inst)
+        /// <summary>
+        /// Create an invalid instruction at a specific address. Useful as a temporary instruction.
+        /// </summary>
+        /// <param name="address">the address of the invalid instruction</param>
+        /// <returns>an invalid instruction</returns>
+        public static Instruction CreateInvalidInstruction(IntPtr address)
         {
-            this.Address = (IntPtr)inst.VirtualAddr;
-            this.Mnemonic = inst.Instruction.Mnemonic;
-            this.stringRepresentation = inst.CompleteInstr;
-            this.BranchTarget = (IntPtr)inst.Instruction.AddrValue;
-            this.FlowType = Instruction.GetFlowControl(this.Mnemonic);
-            this.NumBytes = (uint)inst.Length;
-            this.Arg1 = new InstructionArgument(inst.Argument1);
-            this.Arg2 = new InstructionArgument(inst.Argument2);
-            this.Arg3 = new InstructionArgument(inst.Argument3);
+            Instruction inst = new Instruction();
+            inst.Address = address;
+            inst.Mnemonic = "invalid";
+            inst.stringRepresentation = "invalid instruction";
+            inst.BranchTarget = IntPtr.Zero;
+            inst.FlowType = ControlFlow.None;
+            inst.NumBytes = 0;
+            inst.Arg1 = new InstructionArgument();
+            inst.Arg2 = new InstructionArgument();
+            inst.Arg3 = new InstructionArgument();
+            return inst;
         }
 
-        internal Instruction(Distorm3cs.Distorm.DInst inst)
+        /// <summary>
+        /// Convert the instruction to a string representation.
+        /// </summary>
+        /// <returns>a string representation of the instruction</returns>
+        public override string ToString()
         {
-            this.Address = (IntPtr)inst.addr;
-            this.Mnemonic = inst.InstructionType.ToString().ToLower();
-
-            throw new NotImplementedException();
+            return this.stringRepresentation;
         }
 
+        /// <summary>
+        /// Handles the event when a property is changed.
+        /// </summary>
+        /// <param name="info">information about the property that was changed</param>
+        protected void OnPropertyChanged(string info)
+        {
+            PropertyChangedEventHandler handler = this.PropertyChanged;
+
+            if (handler != null)
+            {
+                handler(this, new PropertyChangedEventArgs(info));
+            }
+        }
+
+        /// <summary>
+        /// Gets the flow control for a mnemonic.
+        /// </summary>
+        /// <param name="mnemonic">the mnemonic of interest</param>
+        /// <returns>the control flow for the supplied mnemonic</returns>
         private static ControlFlow GetFlowControl(string mnemonic)
         {
             string mnemonicLowercase = mnemonic.ToLower();
@@ -147,39 +296,6 @@
             }
         }
 
-        public override string ToString()
-        {
-            return this.stringRepresentation;
-        }
-
-        public static Instruction CreateInvalidInstruction()
-        {
-            Instruction inst = new Instruction();
-            inst.Address = IntPtr.Subtract(IntPtr.Zero, 1);
-            inst.Mnemonic = "invalid";
-            inst.stringRepresentation = "invalid instruction";
-            inst.BranchTarget = IntPtr.Zero;
-            inst.FlowType = ControlFlow.None;
-            inst.NumBytes = 0;
-            inst.Arg1 = new InstructionArgument();
-            inst.Arg2 = new InstructionArgument();
-            inst.Arg3 = new InstructionArgument();
-            return inst;
-        }
-
-        public static Instruction CreateInvalidInstruction(IntPtr address)
-        {
-            Instruction inst = new Instruction();
-            inst.Address = address;
-            inst.Mnemonic = "invalid";
-            inst.stringRepresentation = "invalid instruction";
-            inst.BranchTarget = IntPtr.Zero;
-            inst.FlowType = ControlFlow.None;
-            inst.NumBytes = 0;
-            inst.Arg1 = new InstructionArgument();
-            inst.Arg2 = new InstructionArgument();
-            inst.Arg3 = new InstructionArgument();
-            return inst;
-        }
+        #endregion
     }
 }
