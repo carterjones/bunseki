@@ -29,15 +29,31 @@
         /// <param name="inst">the BeaEngine instruction</param>
         internal Instruction(BeaEngine._Disasm inst)
         {
-            this.Address = (IntPtr)inst.VirtualAddr;
-            this.Mnemonic = inst.Instruction.Mnemonic;
-            this.stringRepresentation = inst.CompleteInstr;
-            this.BranchTarget = (IntPtr)inst.Instruction.AddrValue;
-            this.FlowType = Instruction.GetFlowControl(this.Mnemonic);
-            this.NumBytes = (uint)inst.Length;
-            this.Arg1 = new InstructionArgument(inst.Argument1);
-            this.Arg2 = new InstructionArgument(inst.Argument2);
-            this.Arg3 = new InstructionArgument(inst.Argument3);
+            try
+            {
+                this.Address = inst.VirtualAddr;
+                this.Mnemonic = inst.Instruction.Mnemonic;
+                this.stringRepresentation = inst.CompleteInstr;
+                this.BranchTarget = inst.Instruction.AddrValue;
+                this.FlowType = Instruction.GetFlowControl(this.Mnemonic);
+                this.NumBytes = (uint)inst.Length;
+                this.Arg1 = new InstructionArgument(inst.Argument1);
+                this.Arg2 = new InstructionArgument(inst.Argument2);
+                this.Arg3 = new InstructionArgument(inst.Argument3);
+            }
+            catch
+            {
+                Instruction i = Instruction.CreateInvalidInstruction(this.Address);
+                this.Address = i.Address;
+                this.Mnemonic = i.Mnemonic;
+                this.stringRepresentation = i.stringRepresentation;
+                this.BranchTarget = i.BranchTarget;
+                this.FlowType = i.FlowType;
+                this.NumBytes = i.NumBytes;
+                this.Arg1 = i.Arg1;
+                this.Arg2 = i.Arg2;
+                this.Arg3 = i.Arg3;
+            }
         }
 
         /// <summary>
