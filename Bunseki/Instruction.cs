@@ -233,16 +233,8 @@
         /// <returns>an invalid instruction</returns>
         public static Instruction CreateInvalidInstruction(IntPtr address)
         {
-            Instruction inst = new Instruction();
+            Instruction inst = Instruction.CreateInvalidInstruction();
             inst.Address = address;
-            inst.Mnemonic = "invalid";
-            inst.stringRepresentation = "invalid instruction";
-            inst.BranchTarget = IntPtr.Zero;
-            inst.FlowType = ControlFlow.None;
-            inst.NumBytes = 0;
-            inst.Arg1 = new InstructionArgument();
-            inst.Arg2 = new InstructionArgument();
-            inst.Arg3 = new InstructionArgument();
             return inst;
         }
 
